@@ -1,0 +1,30 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天执行一次，时间可以自定义。这里的例子是每天UTC时间0点执行。
+  workflow_dispatch: # 允许手动触发工作流
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }} # 使用个人访问令牌
+
+      - name: Set upstream remote
+        run: git remote add upstream https://github.com/AnotiaWang/deep-research-web-ui.git  # 将此处的URL替换为源仓库的URL
+
+      - name: Fetch upstream
+        run: git fetch upstream
+
+      - name: Merge upstream/main into your branch
+        run: |
+             git config --global user.name "ZhouNLP"
+             git config --global user.email "l.z24xg@gmail.com"
+             git merge upstream/main --allow-unrelated-histories -X theirs # 合并时,优先使用源仓库（upstream）的代码
+      - name: Push changes
+        run: git push origin main # 这里的 main 需要修改成你的仓库的默认分支名称
