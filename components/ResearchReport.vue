@@ -16,12 +16,18 @@
   const error = ref('')
   const loading = ref(false)
   const loadingExportPdf = ref(false)
+  const loadingExportMarkdown = ref(false)
+  const reasoningContent = ref('')
   const reportContent = ref('')
   const reportHtml = computed(() =>
     marked(reportContent.value, { silent: true, gfm: true, breaks: true }),
   )
   const isExportButtonDisabled = computed(
-    () => !reportContent.value || loading.value || loadingExportPdf.value,
+    () =>
+      !reportContent.value ||
+      loading.value ||
+      loadingExportPdf.value ||
+      loadingExportMarkdown.value,
   )
   let pdf: jsPDF | undefined
 
@@ -29,9 +35,20 @@
     loading.value = true
     error.value = ''
     reportContent.value = ''
+    reasoningContent.value = ''
     try {
-      for await (const chunk of writeFinalReport(params).textStream) {
-        reportContent.value += chunk
+      for await (const chunk of writeFinalReport(params).fullStream) {
+        if (chunk.type === 'reasoning') {
+          reasoningContent.value += chunk.textDelta
+        } else if (chunk.type === 'text-delta') {
+          reportContent.value += chunk.textDelta
+        } else if (chunk.type === 'error') {
+          error.value = t('researchReport.error', [
+            chunk.error instanceof Error
+              ? chunk.error.message
+              : String(chunk.error),
+          ])
+        }
       }
       reportContent.value += `\n\n## ${t(
         'researchReport.sources',
@@ -69,6 +86,8 @@
               duration: 5000,
               color: 'info',
             })
+            // Wait for 100ms to avoid toast being blocked by PDF generation
+            await new Promise((resolve) => setTimeout(resolve, 100))
             const fontUrl = '/fonts/SourceHanSansCN-VF.ttf'
             pdf.addFont(fontUrl, 'SourceHanSans', 'normal')
             pdf.setFont('SourceHanSans')
@@ -134,45 +153,85 @@
     }
   }
 
+  async function exportToMarkdown() {
+    if (!reportContent.value) return
+
+    loadingExportMarkdown.value = true
+    try {
+      const blob = new Blob([reportContent.value], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'research-report.md'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export to Markdown failed:', error)
+    } finally {
+      loadingExportMarkdown.value = false
+    }
+  }
+
   defineExpose({
     generateReport,
     exportToPdf,
+    exportToMarkdown,
   })
 </script>
 
 <template>
   <UCard>
     <template #header>
-      <div class="flex items-center justify-between">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
         <h2 class="font-bold">{{ $t('researchReport.title') }}</h2>
-        <UButton
-          color="info"
-          variant="ghost"
-          icon="i-lucide-download"
-          :disabled="isExportButtonDisabled"
-          :loading="loadingExportPdf"
-          @click="exportToPdf"
-        >
-          {{ $t('researchReport.exportPdf') }}
-        </UButton>
+        <div class="flex gap-2">
+          <UButton
+            color="info"
+            variant="ghost"
+            icon="i-lucide-download"
+            :disabled="isExportButtonDisabled"
+            :loading="loadingExportMarkdown"
+            @click="exportToMarkdown"
+          >
+            {{ $t('researchReport.exportMarkdown') }}
+          </UButton>
+          <UButton
+            color="info"
+            variant="ghost"
+            icon="i-lucide-download"
+            :disabled="isExportButtonDisabled"
+            :loading="loadingExportPdf"
+            @click="exportToPdf"
+          >
+            {{ $t('researchReport.exportPdf') }}
+          </UButton>
+        </div>
       </div>
     </template>
+
+    <div v-if="error" class="text-red-500">{{ error }}</div>
+
+    <ReasoningAccordion
+      v-if="reasoningContent"
+      v-model="reasoningContent"
+      class="mb-4"
+      :loading="loading"
+    />
 
     <div
       v-if="reportContent"
       id="report-content"
-      class="prose prose-sm max-w-none p-6 bg-gray-50 dark:bg-gray-800 dark:text-white rounded-lg shadow"
+      class="prose prose-sm max-w-none p-6 bg-gray-50 dark:bg-gray-800 dark:prose-invert dark:text-white rounded-lg shadow"
       v-html="reportHtml"
     />
-    <template v-else>
-      <div v-if="error" class="text-red-500">{{ error }}</div>
-      <div v-else>
-        {{
-          loading
-            ? $t('researchReport.generating')
-            : $t('researchReport.waiting')
-        }}
-      </div>
-    </template>
+    <div v-else>
+      {{
+        loading ? $t('researchReport.generating') : $t('researchReport.waiting')
+      }}
+    </div>
   </UCard>
 </template>
