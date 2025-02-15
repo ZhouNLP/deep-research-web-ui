@@ -1,19 +1,45 @@
 import { createDeepSeek } from '@ai-sdk/deepseek'
-import { extractReasoningMiddleware, wrapLanguageModel } from 'ai'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
+import { createOpenAI } from '@ai-sdk/openai'
+import {
+  extractReasoningMiddleware,
+  wrapLanguageModel,
+  type LanguageModelV1,
+} from 'ai'
 
 export const useAiModel = () => {
-  const config = useConfigStore()
-  switch (config.config.ai.provider) {
-    case 'openai-compatible':
-      const deepseek = createDeepSeek({
-        apiKey: config.config.ai.apiKey,
-        baseURL: config.aiApiBase,
-      })
-      return wrapLanguageModel({
-        model: deepseek(config.config.ai.model),
-        middleware: extractReasoningMiddleware({ tagName: 'think' }),
-      })
-    default:
-      throw new Error(`Unknown AI provider: ${config.config.ai.provider}`)
+  const { config, aiApiBase } = useConfigStore()
+  let model: LanguageModelV1
+
+  if (config.ai.provider === 'openrouter') {
+    const openRouter = createOpenRouter({
+      apiKey: config.ai.apiKey,
+      baseURL: aiApiBase,
+    })
+    model = openRouter(config.ai.model, {
+      includeReasoning: true,
+    })
+  } else if (
+    config.ai.provider === 'deepseek' ||
+    // Special case if model name includes 'deepseek'
+    // This ensures compatibilty with providers like Siliconflow
+    config.ai.model?.toLowerCase().includes('deepseek')
+  ) {
+    const deepSeek = createDeepSeek({
+      apiKey: config.ai.apiKey,
+      baseURL: aiApiBase,
+    })
+    model = deepSeek(config.ai.model)
+  } else {
+    const openai = createOpenAI({
+      apiKey: config.ai.apiKey,
+      baseURL: aiApiBase,
+    })
+    model = openai(config.ai.model)
   }
+
+  return wrapLanguageModel({
+    model,
+    middleware: extractReasoningMiddleware({ tagName: 'think' }),
+  })
 }

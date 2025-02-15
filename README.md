@@ -15,14 +15,21 @@ Features:
 
 Currently available providers:
 
-- AI: OpenAI compatible
-- Web Search: Tavily (similar to Firecrawl, but with more free quota (1000 credits / month))
+- AI: OpenAI compatible, DeepSeek, OpenRouter, Ollama
+- Web Search: Tavily (1000 free credits / month), Firecrawl
 
 Please give a 🌟 Star if you like this project!
 
 <video width="500" src="https://github.com/user-attachments/assets/2f5a6f9c-18d1-4d40-9822-2de260d55dab" controls></video>
 
 ## Recent updates
+
+25/02/15
+
+- Added AI providers DeepSeek, OpenRouter and Ollama; Added web search provider Firecrawl
+- Supported checking project updates
+- Supported regenerating reports
+- General fixes
 
 25/02/14
 
@@ -37,6 +44,7 @@ Please give a 🌟 Star if you like this project!
 - Fixed "export as PDF" issues
 
 25/02/12
+
 - Added Chinese translation. The models will respond in the user's language.
 - Various fixes
 

@@ -6,9 +6,8 @@ import { parseStreamingJson, type DeepPartial } from '~/utils/json'
 import { trimPrompt } from './ai/providers'
 import { languagePrompt, systemPrompt } from './prompt'
 import zodToJsonSchema from 'zod-to-json-schema'
-import { type TavilySearchResponse } from '@tavily/core'
-import { useTavily } from '~/composables/useTavily'
 import { useAiModel } from '~/composables/useAiProvider'
+import type { Locale } from '~/components/LangSwitcher.vue'
 
 export type ResearchResult = {
   learnings: string[]
@@ -24,8 +23,8 @@ export interface WriteFinalReportParams {
 // Used for streaming response
 export type SearchQuery = z.infer<typeof searchQueriesTypeSchema>['queries'][0]
 export type PartialSearchQuery = DeepPartial<SearchQuery>
-export type SearchResult = z.infer<typeof searchResultTypeSchema>
-export type PartialSearchResult = DeepPartial<SearchResult>
+export type ProcessedSearchResult = z.infer<typeof searchResultTypeSchema>
+export type PartialProcessedSearchResult = DeepPartial<ProcessedSearchResult>
 
 export type ResearchStep =
   | { type: 'generating_query'; result: PartialSearchQuery; nodeId: string }
@@ -37,11 +36,11 @@ export type ResearchStep =
       nodeId: string
     }
   | { type: 'searching'; query: string; nodeId: string }
-  | { type: 'search_complete'; urls: string[]; nodeId: string }
+  | { type: 'search_complete'; results: WebSearchResult[]; nodeId: string }
   | {
       type: 'processing_serach_result'
       query: string
-      result: PartialSearchResult
+      result: PartialProcessedSearchResult
       nodeId: string
     }
   | {
@@ -52,7 +51,7 @@ export type ResearchStep =
   | {
       type: 'processed_search_result'
       query: string
-      result: SearchResult
+      result: ProcessedSearchResult
       nodeId: string
     }
   | { type: 'error'; message: string; nodeId: string }
@@ -135,13 +134,13 @@ export const searchResultTypeSchema = z.object({
 })
 function processSearchResult({
   query,
-  result,
+  results,
   numLearnings = 3,
   numFollowUpQuestions = 3,
   language,
 }: {
   query: string
-  result: TavilySearchResponse
+  results: WebSearchResult[]
   language: string
   numLearnings?: number
   numFollowUpQuestions?: number
@@ -157,10 +156,7 @@ function processSearchResult({
       ),
   })
   const jsonSchema = JSON.stringify(zodToJsonSchema(schema))
-  const contents = result.results
-    .map((item) => item.content)
-    .filter(Boolean)
-    .map((content) => trimPrompt(content, 25_000))
+  const contents = results.map((item) => trimPrompt(item.content, 25_000))
   const prompt = [
     `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.`,
     `<contents>${contents
@@ -219,7 +215,7 @@ export async function deepResearch({
   query,
   breadth,
   maxDepth,
-  language,
+  languageCode,
   learnings = [],
   visitedUrls = [],
   onProgress,
@@ -230,7 +226,8 @@ export async function deepResearch({
   query: string
   breadth: number
   maxDepth: number
-  language: string
+  /** Language code */
+  languageCode: Locale
   learnings?: string[]
   visitedUrls?: string[]
   onProgress: (step: ResearchStep) => void
@@ -240,6 +237,7 @@ export async function deepResearch({
   searchLanguage?: string
 }): Promise<ResearchResult> {
   const { t } = useNuxtApp().$i18n
+  const language = t('language', {}, { locale: languageCode })
 
   try {
     const searchQueriesResult = generateSearchQueries({
@@ -321,20 +319,19 @@ export async function deepResearch({
           })
           try {
             // Use Tavily to search the web
-            const result = await useTavily().search(searchQuery.query, {
+            const results = await useWebSearch()(searchQuery.query, {
               maxResults: 5,
+              lang: languageCode,
             })
             console.log(
-              `Ran ${searchQuery.query}, found ${result.results.length} contents`,
+              `Ran ${searchQuery.query}, found ${results.length} contents`,
             )
 
             // Collect URLs from this search
-            const newUrls = result.results
-              .map((item) => item.url)
-              .filter(Boolean)
+            const newUrls = results.map((item) => item.url).filter(Boolean)
             onProgress({
               type: 'search_complete',
-              urls: newUrls,
+              results,
               nodeId: childNodeId(nodeId, i),
             })
             // Breadth for the next search is half of the current breadth
@@ -342,11 +339,11 @@ export async function deepResearch({
 
             const searchResultGenerator = processSearchResult({
               query: searchQuery.query,
-              result,
+              results,
               numFollowUpQuestions: nextBreadth,
               language,
             })
-            let searchResult: PartialSearchResult = {}
+            let searchResult: PartialProcessedSearchResult = {}
 
             for await (const chunk of parseStreamingJson(
               searchResultGenerator.fullStream,
@@ -429,7 +426,7 @@ export async function deepResearch({
                 onProgress,
                 currentDepth: nextDepth,
                 nodeId: childNodeId(nodeId, i),
-                language,
+                languageCode,
               })
             } else {
               return {

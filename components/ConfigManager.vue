@@ -24,14 +24,46 @@
     {
       label: t('settings.ai.providers.openaiCompatible.title'),
       help: t('settings.ai.providers.openaiCompatible.description'),
-      apiBasePlaceholder: t(
-        'settings.ai.providers.openaiCompatible.apiBasePlaceholder',
-      ),
       value: 'openai-compatible',
+    },
+    {
+      label: 'DeepSeek',
+      value: 'deepseek',
+    },
+    {
+      label: 'OpenRouter',
+      value: 'openrouter',
+    },
+    {
+      label: 'Ollama',
+      value: 'ollama',
+    },
+  ])
+  const webSearchProviderOptions = computed(() => [
+    {
+      label: 'Tavily',
+      value: 'tavily',
+      help: 'settings.webSearch.providers.tavily.help',
+      // Only kept for easy reference in i18n Ally
+      _help: t('settings.webSearch.providers.tavily.help'),
+      link: 'https://app.tavily.com/home',
+    },
+    {
+      label: 'Firecrawl',
+      value: 'firecrawl',
+      help: 'settings.webSearch.providers.firecrawl.help',
+      // Only kept for easy reference in i18n Ally
+      _help: t('settings.webSearch.providers.firecrawl.help'),
+      link: 'https://www.firecrawl.dev/app/api-keys',
     },
   ])
   const selectedAiProvider = computed(() =>
     aiProviderOptions.value.find((o) => o.value === config.value.ai.provider),
+  )
+  const selectedWebSearchProvider = computed(() =>
+    webSearchProviderOptions.value.find(
+      (o) => o.value === config.value.webSearch.provider,
+    ),
   )
 
   // Try to find available AI models based on selected provider
@@ -110,15 +142,22 @@
           <h3 class="font-bold">{{ $t('settings.ai.provider') }}</h3>
           <UFormField>
             <template v-if="selectedAiProvider" #help>
-              {{ selectedAiProvider.help }}
+              <span class="whitespace-pre-wrap">
+                {{ selectedAiProvider.help }}
+              </span>
             </template>
-            <USelect v-model="config.ai.provider" :items="aiProviderOptions" />
+            <USelect
+              v-model="config.ai.provider"
+              class="w-auto"
+              :items="aiProviderOptions"
+            />
           </UFormField>
-          <div
-            v-if="config.ai.provider === 'openai-compatible'"
-            class="flex flex-col gap-y-2"
-          >
-            <UFormField :label="$t('settings.ai.apiKey')" required>
+
+          <div class="flex flex-col gap-y-2">
+            <UFormField
+              :label="$t('settings.ai.apiKey')"
+              :required="config.ai.provider !== 'ollama'"
+            >
               <PasswordInput
                 v-model="config.ai.apiKey"
                 class="w-full"
@@ -129,7 +168,7 @@
               <UInput
                 v-model="config.ai.apiBase"
                 class="w-full"
-                :placeholder="selectedAiProvider?.apiBasePlaceholder"
+                :placeholder="aiApiBase"
               />
             </UFormField>
             <UFormField :label="$t('settings.ai.model')" required>
@@ -158,20 +197,25 @@
           <h3 class="font-bold"> {{ $t('settings.webSearch.provider') }} </h3>
           <UFormField>
             <template #help>
-              <i18n-t keypath="settings.webSearch.providerHelp" tag="p">
+              <i18n-t
+                v-if="selectedWebSearchProvider?.help"
+                :keypath="selectedWebSearchProvider.help"
+                tag="p"
+              >
                 <UButton
                   class="!p-0"
-                  to="https://app.tavily.com/home"
+                  :to="selectedWebSearchProvider.link"
                   target="_blank"
                   variant="link"
                 >
-                  app.tavily.com
+                  {{ selectedWebSearchProvider.link }}
                 </UButton>
               </i18n-t>
             </template>
             <USelect
               v-model="config.webSearch.provider"
-              :items="[{ label: 'Tavily', value: 'tavily' }]"
+              class="w-auto"
+              :items="webSearchProviderOptions"
             />
           </UFormField>
           <UFormField :label="$t('settings.webSearch.apiKey')" required>
