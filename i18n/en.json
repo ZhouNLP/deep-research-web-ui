@@ -81,9 +81,16 @@
     "generating": "Generating report...",
     "error": "Generate report failed: {0}",
     "downloadingFonts": "Downloading necessary fonts, this may take some time...",
-    "downloadFontFailed": "Download font failed"
+    "downloadFontFailed": "Download font failed",
+    "regenerate": "Regenerate"
   },
   "error": {
     "requestBlockedByCORS": "The current API provider may not allow cross-origin requests. Please try a different service provider or contact the provider for support."
+  },
+  "autoUpdate": {
+    "newVersionTitle": "New version available: {0}",
+    "newVersionDescription": "Note: If you are using a self-hosted version, please re-deploy to get new features and bug fixes.",
+    "refresh": "Refresh page",
+    "dismiss": "Dismiss"
   }
 }
