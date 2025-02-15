@@ -26,5 +26,9 @@ jobs:
              git config --global user.name "ZhouNLP"
              git config --global user.email "l.z24xg@gmail.com"
              git merge upstream/main --allow-unrelated-histories -X theirs # 合并时,优先使用源仓库（upstream）的代码
+             
+      - name: Remove docker-publish.yml (if exists)
+        run: rm -f .github/workflows/docker-publish.yml
+        
       - name: Push changes
         run: git push origin main # 这里的 main 需要修改成你的仓库的默认分支名称
