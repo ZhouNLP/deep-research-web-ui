@@ -46,6 +46,7 @@
         <ResearchReport ref="reportRef" />
       </div>
     </UContainer>
+    <AutoUpdateToast />
   </div>
 </template>
 
@@ -64,9 +65,6 @@
     researchResultInjectionKey,
   } from '~/constants/injection-keys'
 
-  const { t } = useI18n()
-  const { config } = storeToRefs(useConfigStore())
-  const toast = useToast()
   const version = useRuntimeConfig().public.version
 
   const configManagerRef = ref<InstanceType<typeof ConfigManager>>()
@@ -92,18 +90,6 @@
   provide(researchResultInjectionKey, researchResult)
 
   async function generateFeedback() {
-    const aiConfig = config.value.ai
-    const webSearchConfig = config.value.webSearch
-
-    if (!aiConfig.model || !aiConfig.apiKey || !webSearchConfig.apiKey) {
-      toast.add({
-        title: t('index.missingConfigTitle'),
-        description: t('index.missingConfigDescription'),
-        color: 'error',
-      })
-      configManagerRef.value?.show()
-      return
-    }
     feedbackRef.value?.getFeedback()
   }
 

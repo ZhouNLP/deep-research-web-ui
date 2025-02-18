@@ -18,6 +18,11 @@
 
 ## 近期更新
 
+25/02/17
+
+- 支持设置模型上下文长度
+- 支持限制联网搜索的并发数
+
 25/02/16
 
 - 使用 VueFlow 重构了搜索可视化功能
@@ -25,7 +30,7 @@
 
 25/02/15
 
-- AI 提供商支持 DeepSeek，OpenRouter 和 Ollama，联网搜素支持 Firecrawl
+- AI 提供商支持 DeepSeek，OpenRouter 和 Ollama，联网搜索支持 Firecrawl
 - 支持检查项目更新
 - 支持重新生成报告
 - 一般性优化和改进

@@ -21,11 +21,25 @@ export interface ConfigWebSearch {
   apiKey?: string
   /** Force the LLM to generate serp queries in a certain language */
   searchLanguage?: Locale
+  /** Limit the number of concurrent tasks globally */
+  concurrencyLimit?: number
 }
 
 export interface Config {
   ai: ConfigAi
   webSearch: ConfigWebSearch
+}
+
+function validateConfig(config: Config) {
+  const ai = config.ai
+  if (ai.provider !== 'ollama' && !ai.apiKey) return false
+  if (typeof ai.contextSize !== 'undefined' && ai.contextSize < 0) return false
+
+  const ws = config.webSearch
+  if (!ws.apiKey) return false
+  if (typeof ws.concurrencyLimit !== 'undefined' && ws.concurrencyLimit! < 1)
+    return false
+  return true
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -37,13 +51,15 @@ export const useConfigStore = defineStore('config', () => {
     },
     webSearch: {
       provider: 'tavily',
+      concurrencyLimit: 2,
     },
-  })
+  } satisfies Config)
   // The version user dismissed the update notification
   const dismissUpdateVersion = useLocalStorage<string>(
     'dismiss-update-version',
     '',
   )
+  const isConfigValid = computed(() => validateConfig(config.value))
 
   const aiApiBase = computed(() => {
     if (config.value.ai.provider === 'openrouter') {
@@ -62,6 +78,7 @@ export const useConfigStore = defineStore('config', () => {
 
   return {
     config: skipHydrate(config),
+    isConfigValid,
     aiApiBase,
     showConfigManager,
     dismissUpdateVersion: skipHydrate(dismissUpdateVersion),
