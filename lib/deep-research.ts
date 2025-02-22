@@ -1,5 +1,4 @@
 import { streamText } from 'ai'
-import pLimit from 'p-limit'
 import { z } from 'zod'
 import { parseStreamingJson, type DeepPartial } from '~/utils/json'
 
@@ -19,7 +18,7 @@ export interface WriteFinalReportParams {
   learnings: string[]
   language: string
 }
-// useRuntimeConfig()
+
 // Used for streaming response
 export type SearchQuery = z.infer<typeof searchQueriesTypeSchema>['queries'][0]
 export type PartialSearchQuery = DeepPartial<SearchQuery>
@@ -243,12 +242,6 @@ export async function deepResearch({
   const language = t('language', {}, { locale: languageCode })
   const globalLimit = usePLimit()
 
-  onProgress({
-    type: 'generating_query',
-    nodeId,
-    result: {},
-  })
-
   try {
     const searchQueriesResult = generateSearchQueries({
       query,
@@ -411,7 +404,7 @@ export async function deepResearch({
             onProgress({
               type: 'node_complete',
               result: {
-                learnings: allLearnings,
+                learnings: searchResult.learnings ?? [],
                 followUpQuestions: searchResult.followUpQuestions ?? [],
               },
               nodeId: childNodeId(nodeId, i),
