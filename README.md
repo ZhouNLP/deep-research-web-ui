@@ -24,6 +24,12 @@ Please give a 🌟 Star if you like this project!
 
 ## Recent updates
 
+25/02/24
+
+- Added: Fullscreen mode for the search flow. This helps you to focus on the search process better.
+- Changed: "Export PDF" now uses the browser's native print ability. This fixes layout issues and emilinates font problems.
+- Fixed: "Context Size" setting are not correctly applied
+
 25/02/22
 
 - Added: NL/Dutch translation
@@ -54,6 +60,9 @@ Please give a 🌟 Star if you like this project!
 - Supported regenerating reports
 - General fixes
 
+<details>
+<summary>Older updates</summary>
+
 25/02/14
 
 - Supported reasoning models like DeepSeek R1
@@ -65,6 +74,7 @@ Please give a 🌟 Star if you like this project!
 - Supported searching in different languages
 - Added Docker support
 - Fixed "export as PDF" issues
+</details>
 
 ## How to use
 
